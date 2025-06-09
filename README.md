@@ -6,32 +6,11 @@ Research Agent is an intelligent academic paper research assistant system design
 
 ## ✨ Key Features
 
-### 🔍 Multi-Source Paper Scraping
-- **OpenReview Conferences**: Top machine learning conferences like ICLR, NeurIPS, ICML
-- **CVF Conferences**: Computer vision conferences like CVPR, ECCV  
-- **ACL Conferences**: Natural language processing conferences like ACL
-- **Time Range Filtering**: Support incremental scraping with specified start dates
-
-### 🎯 Intelligent Paper Filtering
-- **Keyword Matching**: Precise filtering based on user-defined keywords
-- **AI Abstract Summarization**: Use GPT-4o to condense lengthy abstracts into 2-3 core sentences
-- **Multi-dimensional Filtering**: Support filtering by conference, time, decision status, etc.
-
-### 📊 Paper Recognition Assessment
-- **Open Source Code Retrieval**: Automatically query PapersWithCode platform for implementations
-- **GitHub Impact Analysis**: Obtain metrics like repository stars, creation time, etc.
-- **Comprehensive Scoring System**: Calculate paper industry recognition scores based on multiple dimensions
-
-### 📈 Trend Analysis & Reporting
-- **Hot Topic Analysis**: Statistics on high-frequency keywords and research trends
-- **Conference Distribution Statistics**: Analysis of paper quantity and quality across major conferences
-- **Recognition Rankings**: Display most popular papers by score
-- **Intelligent Report Generation**: Automatically generate research briefs in Markdown format
-
-### 🤖 Slack Bot Integration
-- **Interactive Queries**: Real-time search for papers by specific keywords and years via @Bot commands
-- **Real-time Push**: Support automatic report pushing to Slack channels
-- **Command Example**: `@Bot search autoregressive 2025`
+- **🔍 Multi-Source Paper Scraping**: Automatically scrape papers from top AI conferences (ICLR, NeurIPS, ICML, CVPR, ECCV, ACL)
+- **🎯 Intelligent Filtering**: Keyword-based filtering with GPT-4o abstract summarization for quick paper identification
+- **📊 Recognition Assessment**: Evaluate paper impact using PapersWithCode and GitHub metrics
+- **📈 Trend Analysis**: Generate research trend reports with hot topic statistics and conference distribution
+- **🤖 Slack Integration**: Interactive bot queries and automatic report pushing capabilities
 
 ## 🏗️ System Architecture
 
@@ -156,12 +135,6 @@ Modify the `calculate_score()` function in `processors/scoring.py` to adjust sco
 
 ### Custom Report Templates
 Edit the report generation logic and Markdown templates in `processors/report_generator.py`.
-
-## 📞 Technical Support
-
-For questions or suggestions, please contact us via:
-- Create a GitHub Issue
-- Email the project maintainers
 
 ---
 
