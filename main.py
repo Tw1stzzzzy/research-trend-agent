@@ -33,17 +33,17 @@ pwcode_fetcher = PWCodeFetcher(PWC_API_KEY)
 github_fetcher = GitHubFetcher(GITHUB_TOKEN)
 
 # 会议列表和对应 Fetcher 初始化
-# OpenReview 会议 ID
+# OpenReview 会议 ID (使用2023年数据进行测试)
 openreview_confs = [
-    "ICLR.cc/2024/Conference",
-    "NeurIPS.cc/2024/Conference",
-    "ICML.cc/2024/Conference"
+    "ICLR.cc/2023/Conference",
+    # "NeurIPS.cc/2023/Conference",  # 先只测试一个会议
+    # "ICML.cc/2023/Conference"
 ]
 
-# CVF 会议 URL 和 Venue 名称
+# CVF 会议 URL 和 Venue 名称 (使用2023年数据)
 cvf_confs = [
-    ("https://openaccess.thecvf.com/CVPR2024", "CVPR"),
-    ("https://openaccess.thecvf.com/ECCV2024", "ECCV")
+    ("https://openaccess.thecvf.com/CVPR2023", "CVPR"),
+    # ("https://openaccess.thecvf.com/ECCV2023", "ECCV")  # 先只测试一个会议
 ]
 
 # ACL 会议设置
@@ -65,10 +65,11 @@ for url, venue in cvf_confs:
     papers = fetcher.fetch_papers()
     all_papers.extend(papers)
 
-# 2.3 ACL 部分
-acl_fetcher = ACLFetcher(year=acl_year, conference=acl_conf)
-acl_papers = acl_fetcher.fetch_papers()
-all_papers.extend(acl_papers)
+# 2.3 ACL 部分 (暂时注释，URL可能有问题)
+# acl_fetcher = ACLFetcher(year=acl_year, conference=acl_conf)
+# acl_papers = acl_fetcher.fetch_papers()
+# all_papers.extend(acl_papers)
+print("ACL部分暂时跳过，URL需要修复")
 
 # 2.4 保存原始拉取数据（可选）
 os.makedirs("output", exist_ok=True)

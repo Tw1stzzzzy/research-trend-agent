@@ -1,0 +1,38 @@
+# LLM API Configuration (choose one)
+# Option 1: Hugging Face (Recommended - 30k free calls/month)
+huggingface:
+  api_key: "your-huggingface-token-here"
+  model: "mistralai/Mixtral-8x7B-Instruct-v0.1"  # or other models
+
+# Option 2: Groq (Fast - 14.4k free calls/day)
+groq:
+  api_key: "your-groq-api-key-here"
+  model: "llama3-8b-8192"
+
+# Option 3: Together AI ($5 free credit)
+together:
+  api_key: "your-together-api-key-here"
+  model: "meta-llama/Llama-2-7b-chat-hf"
+
+# Option 4: OpenAI (if you have credits)
+openai:
+  api_key: "your-openai-api-key-here"
+
+# GitHub API (Free - 5k requests/hour)
+github:
+  token: "your-github-token-here"
+
+# PapersWithCode (Optional)
+paperswithcode:
+  api_key: "your-pwc-api-key-here"  # Leave empty to skip
+
+# Slack (Free plan available)
+slack:
+  webhook_url: "your-slack-webhook-url-here"
+
+# Scraping Configuration
+fetch:
+  since_date: "2022-01-01"
+
+# LLM Provider Selection (choose: huggingface, groq, together, or openai)
+llm_provider: "groq" 
