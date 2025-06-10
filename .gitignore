@@ -17,4 +17,6 @@ output/
 
 # macOS 缓存文件
 .DS_Store
+
+# 配置文件
 configs/config.yaml

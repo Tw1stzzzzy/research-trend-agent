@@ -1,49 +1,66 @@
-import openai
-import yaml
+from processors.llm_client import LLMClient
 
-# 从配置文件中读取 OpenAI API Key
-with open("configs/config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-OPENAI_API_KEY = config['openai']['api_key']
-openai.api_key = OPENAI_API_KEY
+# 初始化LLM客户端
+llm_client = LLMClient()
 
 def generate_llm_summary(statistics: dict) -> str:
     """
-    输入：statistics 字典，包含 total_papers, open_source_count, avg_score, keyword_counts 等
-    输出：GPT-4o 生成的 200-300 字科研简报
+    Input: statistics dictionary containing total_papers, open_source_count, avg_score, keyword_counts, etc.
+    Output: LLM-generated 200-300 word research trend summary in English
     """
-    # 构造统计文字
+    # Build statistical summary text
     stat_lines = [
-        f"- 总论文数: {statistics['total_papers']}",
-        f"- 开源论文数: {statistics['open_source_count']} ({statistics['open_source_count'] / statistics['total_papers']:.2%})",
-        f"- 平均认可度分: {statistics['avg_score']:.2f}"
+        f"- Total Papers: {statistics['total_papers']}",
+        f"- Open Source Papers: {statistics['open_source_count']} ({statistics['open_source_count'] / statistics['total_papers']:.2%})",
+        f"- Average Recognition Score: {statistics['avg_score']:.2f}"
     ]
-    stat_lines.append("## 关键词分布：")
-    for kw, cnt in statistics['keyword_counts'].items():
-        stat_lines.append(f"- {kw}: {cnt} ({cnt / statistics['total_papers']:.2%})")
+    
+    stat_lines.append("\n## Keyword Distribution:")
+    # Sort keywords by count for better analysis
+    sorted_keywords = sorted(statistics['keyword_counts'].items(), key=lambda x: x[1], reverse=True)
+    for kw, cnt in sorted_keywords:
+        if cnt > 0:  # Only include keywords with papers
+            stat_lines.append(f"- {kw.title()}: {cnt} papers ({cnt / statistics['total_papers']:.1%})")
 
     stat_text = "\n".join(stat_lines)
 
     system_prompt = """
-你是一名科研趋势分析师。请根据我提供的本周机器学习六大顶会论文统计数据，
-写一份200-300字的科研趋势简报，总结以下要点：
-- 当前最热点的方向
-- 热度占比最高的关键词
-- 开源率与认可度总体情况
-- 是否有值得重点关注的新模型或新论文
-请用简明扼要的语言，适合给实验室组会报告使用。
+You are an AI research trend analyst. Based on the provided statistical data from top AI conferences (ICLR, NeurIPS, ICML, CVPR, ECCV, ACL), 
+write a 200-300 word research trend summary covering:
+
+- Current hottest research directions
+- Most popular keywords and their significance
+- Overall open source adoption rate and recognition patterns
+- Notable emerging trends or breakthrough areas
+- Recommendations for researchers and practitioners
+
+Use clear, professional language suitable for academic reports and research lab meetings.
 """
-    user_prompt = f"本周统计数据如下：\n{stat_text}"
+
+    user_prompt = f"Here are the weekly statistics:\n\n{stat_text}\n\nPlease analyze these trends and provide insights."
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3
-        )
-        return response['choices'][0]['message']['content'].strip()
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        summary = llm_client.generate_response(messages, temperature=0.3, max_tokens=400)
+        return summary
+        
     except Exception as e:
-        return f"LLM 生成失败，以下为原始统计算据：\n{stat_text}"
+        # Fallback: provide basic statistical summary
+        fallback_summary = f"""
+**Research Activity Summary**
+
+This report analyzed {statistics['total_papers']} papers from major AI conferences. 
+
+**Open Source Landscape**: {statistics['open_source_count']} papers ({statistics['open_source_count'] / statistics['total_papers']:.1%}) have open source implementations, indicating {'strong' if statistics['open_source_count'] / statistics['total_papers'] > 0.5 else 'moderate' if statistics['open_source_count'] / statistics['total_papers'] > 0.3 else 'limited'} community engagement with reproducible research.
+
+**Recognition Metrics**: The average recognition score is {statistics['avg_score']:.2f}, reflecting the overall impact and adoption of these research contributions.
+
+**Research Focus**: The most active research areas based on keyword frequency are {', '.join([kw for kw, cnt in sorted_keywords[:3] if cnt > 0])}, suggesting these remain central themes in current AI research.
+
+*Note: LLM analysis unavailable due to: {str(e)}*
+"""
+        return fallback_summary

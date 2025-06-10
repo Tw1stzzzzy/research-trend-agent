@@ -2,14 +2,9 @@ transformer
 attention
 autoregressive
 diffusion
-neural network
-deep learning
-machine learning
 natural language processing
 computer vision
 reinforcement learning
 generative model
 large language model
-multimodal
-reasoning
 fine-tuning
