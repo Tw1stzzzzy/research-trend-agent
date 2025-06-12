@@ -91,6 +91,14 @@ diffusion
 ### Usage
 
 ```bash
+# If you've run the system before and want to keep previous results,
+# make sure to backup important files from the output directory first
+# mkdir -p backup && cp output/*.json output/report.md backup/
+
+# Clear previous output files before a new run
+rm -f output/*.json output/report.md
+
+# Run the system
 python main.py
 ```
 
