@@ -2,51 +2,53 @@
 
 ## 📖 Project Overview
 
-Research Agent is an intelligent academic paper research assistant system designed to help researchers efficiently track and analyze the latest paper trends from top AI conferences. The system provides personalized academic research reports through automated paper scraping, intelligent filtering, recognition assessment, and trend analysis.
+Research Agent is an intelligent academic paper research assistant system designed to help researchers efficiently track and analyze the latest paper trends from top AI conferences. The system automatically scrapes papers from major AI conferences, filters them based on keywords, assesses their impact and recognition through code repository metrics, and generates comprehensive research trend reports.
 
 ## ✨ Key Features
 
 - **🔍 Multi-Source Paper Scraping**: Automatically scrape papers from top AI conferences (ICLR, NeurIPS, ICML, CVPR, ECCV, ACL)
-- **🎯 Intelligent Filtering**: Keyword-based filtering with GPT-4o abstract summarization for quick paper identification
-- **📊 Recognition Assessment**: Evaluate paper impact using PapersWithCode and GitHub metrics
+- **🎯 Intelligent Filtering**: Keyword-based filtering with LLM-powered abstract summarization for rapid paper identification
+- **📊 Recognition Assessment**: Evaluate paper impact using PapersWithCode and GitHub metrics (stars, forks, etc.)
+- **🧠 Smart Repository Matching**: Advanced validation and cleaning process to ensure high-quality paper-repository matches
 - **📈 Trend Analysis**: Generate research trend reports with hot topic statistics and conference distribution
-- **🤖 Slack Integration**: Interactive bot queries and automatic report pushing capabilities
+- **🤖 Slack Integration**: Push notifications for newly discovered high-impact papers
 
 ## 🏗️ System Architecture
 
 ```
 research_agent/
 ├── main.py              # Main program entry
-├── slack_app.py         # Slack bot service
 ├── fetchers/            # Paper scraping modules
-│   ├── openreview_fetcher.py
-│   ├── cvf_fetcher.py
-│   ├── acl_fetcher.py
-│   ├── pwcode_fetcher.py
-│   └── github_fetcher.py
+│   ├── openreview_fetcher.py  # Fetch from OpenReview (ICLR, NeurIPS, ICML)
+│   ├── cvf_fetcher.py         # Fetch from CVF (CVPR, ECCV)
+│   ├── acl_fetcher.py         # Fetch from ACL Anthology
+│   ├── pwcode_fetcher.py      # PapersWithCode API integration
+│   └── github_fetcher.py      # GitHub API integration
 ├── processors/          # Data processing modules
-│   ├── filter_and_summarize.py
-│   ├── scoring.py
-│   ├── trend_analyzer.py
-│   ├── llm_summary.py
-│   └── report_generator.py
+│   ├── filter_and_summarize.py  # Filter papers by keywords
+│   ├── paper_processor.py       # Validate and clean paper-repo matches
+│   ├── scoring.py               # Calculate paper scores
+│   ├── trend_analyzer.py        # Analyze research trends
+│   ├── llm_client.py            # LLM API client
+│   ├── llm_summary.py           # Generate paper summaries
+│   └── report_generator.py      # Generate markdown reports
 └── configs/             # Configuration files
-    ├── config.yaml
-    └── keywords.txt
+    ├── config.yaml      # API keys and system settings
+    └── keywords.txt     # Keywords for paper filtering
 ```
 
 ## 🚀 Quick Start
 
 ### System Requirements
 - Python 3.8+
-- Dependencies: `openreview-py`, `requests`, `beautifulsoup4`, `pyyaml`, `openai`, `slack-bolt`, `flask`
+- Dependencies: `openreview-py`, `requests`, `beautifulsoup4`, `pyyaml`, `openai`, etc.
 
 ### Installation Steps
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd research_agent
+git clone https://github.com/Tw1stzzzzy/research-trend-agent.git
+cd research-trend-agent
 ```
 
 2. **Install dependencies**
@@ -59,6 +61,7 @@ pip install -r requirements.txt
 Edit `configs/config.yaml`:
 ```yaml
 # API Configuration
+llm_provider: "openai"  # or "anthropic", etc.
 openai:
   api_key: "your-openai-api-key"
 
@@ -87,43 +90,54 @@ diffusion
 
 ### Usage
 
-#### 1. Batch Processing Mode
 ```bash
 python main.py
 ```
+
 After completion, check the `output/` directory for:
 - `raw_papers.json` - Raw paper data
 - `filtered_papers.json` - Filtered papers
-- `scored_papers.json` - Scored papers
+- `scored_papers.json` - Scored papers with repository matches
 - `report.md` - Final research report
-
-#### 2. Slack Bot Mode
-```bash
-# Set environment variables
-export SLACK_BOT_TOKEN="your-bot-token"
-export SLACK_SIGNING_SECRET="your-signing-secret"
-
-# Start Slack application
-python slack_app.py
-```
-
-Then use in Slack:
-```
-@Bot search transformer 2024
-```
 
 ## 📋 Configuration Guide
 
 ### API Key Acquisition
 - **OpenAI API**: Visit [OpenAI Platform](https://platform.openai.com/) to obtain
 - **PapersWithCode API**: Apply at [PWC API](https://paperswithcode.com/api/v1/docs/)
-- **GitHub Token**: Create in GitHub Settings > Developer settings
-- **Slack App**: Create application at [Slack API](https://api.slack.com/apps)
+- **GitHub Token**: Create in GitHub Settings > Developer settings > Personal access tokens
+- **Slack Webhook**: Create at [Slack API](https://api.slack.com/messaging/webhooks)
 
 ### Keyword Configuration
 Add one keyword per line in `configs/keywords.txt`. The system performs exact matching (supports regex boundaries).
 
-## 🔧 Extension Development
+## 🔧 Key Components
+
+### Paper Fetchers
+The system supports multiple paper sources through dedicated fetcher modules:
+- **OpenReview Fetcher**: For ICLR, NeurIPS, ICML papers
+- **CVF Fetcher**: For CVPR, ECCV papers
+- **ACL Fetcher**: For ACL Anthology papers
+
+### Repository Matching
+The system employs a sophisticated algorithm to match papers with their official repositories:
+1. First attempts to find through PapersWithCode API
+2. Falls back to GitHub search using paper titles and author names
+3. Applies validation and cleaning process to ensure high-quality matches
+
+### Paper Processing
+- **Filtering**: Keyword-based filtering to identify relevant papers
+- **Scoring**: Multi-factor scoring based on GitHub metrics and paper features
+- **Trend Analysis**: Identify hot research topics and emerging trends
+
+### Report Generation
+Generates comprehensive Markdown reports including:
+- Top papers by impact score
+- Research trend analysis
+- Hot topics statistics
+- Detailed paper information with links
+
+## 🛠️ Extension Development
 
 ### Adding New Paper Sources
 1. Create a new fetcher class in the `fetchers/` directory
@@ -138,4 +152,4 @@ Edit the report generation logic and Markdown templates in `processors/report_ge
 
 ---
 
-**Note**: Please ensure compliance with API usage terms and rate limits of academic platforms before using this system. 
+**Note**: Please ensure compliance with API usage terms and rate limits of academic platforms when using this system. 
