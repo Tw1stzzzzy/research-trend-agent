@@ -6,13 +6,14 @@ import time
 from fetchers.openreview_fetcher import OpenReviewFetcher
 from fetchers.acl_fetcher import ACLFetcher
 from fetchers.cvf_fetcher import CVFFetcher
-from fetchers.pwcode_fetcher import PWCodeFetcher
 from fetchers.github_fetcher import GitHubFetcher
+from fetchers.pwcode_fetcher import PWCodeFetcher
 
 from processors.filter_and_summarize import process_papers
 from processors.scoring import calculate_score
 from processors.trend_analyzer import analyze_trends
 from processors.report_generator import generate_report
+from processors.paper_processor import validate_and_clean_matches
 
 import requests
 from datetime import datetime
@@ -88,74 +89,17 @@ with open("output/filtered_papers.json", "w", encoding="utf-8") as f:
 
 print(f"🔍 Keyword filtering completed: {len(filtered_papers)} papers remain")
 
-# ── 4. 认可度打分 & GitHub筛选 ─────────────────────────────
-scored_results = []
-skipped_no_github = 0
+# 步骤 3：计算每篇论文的分数
+print("\n📊 Calculating paper scores...")
+scored_papers = calculate_score(filtered_papers, github_fetcher, pwcode_fetcher)
 
-print("🔍 Starting recognition scoring (GitHub repos required)...")
-if PWC_API_KEY == "your-pwc-api-key-here" or not PWC_API_KEY:
-    print("⚠️  PapersWithCode API not configured, trying direct GitHub search")
+# 步骤 3.5：验证和清理匹配结果，提高匹配质量
+print("\n🧹 Validating and cleaning repository matches...")
+scored_papers = validate_and_clean_matches(scored_papers)
 
-for i, paper in enumerate(filtered_papers, 1):
-    title = paper['title']
-    print(f"  📋 Processing {i}/{len(filtered_papers)}: {title[:50]}...")
-    
-    # 4.1 查询 PapersWithCode
-    pwc_info = None
-    if PWC_API_KEY and PWC_API_KEY != "your-pwc-api-key-here":
-        pwc_info = pwcode_fetcher.search_paper(title)
-    
-    is_pwcode = True if pwc_info else False
-    repo_url = pwc_info['repo_url'] if pwc_info else None
-
-    # 4.2 如果没有从PWC找到，尝试直接搜索GitHub（基于论文标题）
-    github_result = None
-    if not repo_url:
-        github_result = github_fetcher.search_paper_repository(title)
-        if github_result:
-            repo_url = github_result['repo_url']
-            github_stats = github_result['stats']
-        
-    # 4.3 查询 GitHub Repo Stats（如果还没有统计信息）
-    if repo_url and not github_result:
-        github_stats = github_fetcher.get_repo_stats(repo_url)
-    elif github_result:
-        github_stats = github_result['stats']
-    else:
-        github_stats = None
-        
-    stars = github_stats['stars'] if github_stats else None
-    days_open = github_stats['days_since_created'] if github_stats else None
-
-    # 4.4 只保留有GitHub仓库的论文
-    if not repo_url or not github_stats:
-        print(f"    ❌ No GitHub repo found, skipping paper")
-        skipped_no_github += 1
-        continue
-        
-    # 4.5 计算分数（只有有GitHub的论文才会到这里）
-    score = calculate_score(is_pwcode, stars, days_open)
-    
-    print(f"    ✅ Found repo with {stars} stars, score: {score:.1f}")
-    
-    scored_results.append({
-        'title': title,
-        'authors': paper.get('authors', []),
-        'summary': paper.get('summary', ""),
-        'pdf_url': paper.get('pdf_url', ""),
-        'venue': paper.get('venue', ""),
-        'repo': repo_url,
-        'stars': stars,
-        'days_since_created': days_open,
-        'score': score
-    })
-
-# 保存评分结果
+# 保存结果
 with open("output/scored_papers.json", "w", encoding="utf-8") as f:
-    json.dump(scored_results, f, indent=2)
-
-print(f"📊 Recognition scoring completed: {len(scored_results)} papers with GitHub repos found")
-print(f"⚠️  Skipped {skipped_no_github} papers without GitHub repositories")
+    json.dump(scored_papers, f, ensure_ascii=False, indent=2)
 
 # ── 5. 趋势统计 & 报告生成 ─────────────────────────────────
 stats = analyze_trends("output/scored_papers.json")
@@ -163,43 +107,31 @@ report_text = generate_report("output/scored_papers.json", "output")
 print("📄 Trend report generated successfully → output/report.md")
 
 # ── 6. Slack 推送（若配置了 webhook） ─────────────────────────
-if SLACK_WEBHOOK:
+if SLACK_WEBHOOK and SLACK_WEBHOOK != "your-slack-webhook-here":
     try:
-        # 创建丰富但清晰的Slack消息
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        slack_summary = f"""*AI Research Trend Report* ({date_str})
-
-*Summary Statistics:*
-• Total Papers: {stats.get('total_papers', 0)}
-• Open Source: {stats.get('open_source_count', 0)} ({stats.get('open_source_count', 0)/max(stats.get('total_papers', 1), 1)*100:.1f}%)
-• Average Score: {stats.get('avg_score', 0):.1f}/5.0
-
-*Hot Research Topics:*"""
+        # 准备Slack消息内容
+        slack_summary = f"📋 *AI Research Trend Report ({datetime.now().strftime('%Y-%m-%d')})*\n\n"
+        slack_summary += f"✨ *Total Papers*: {len(scored_papers)} papers analyzed\n"
         
-        # 添加关键词分布
-        if stats.get('keyword_counts'):
-            sorted_keywords = sorted(stats['keyword_counts'].items(), key=lambda x: x[1], reverse=True)
-            for kw, cnt in sorted_keywords[:3]:
-                if cnt > 0:
-                    percentage = (cnt / stats.get('total_papers', 1)) * 100
-                    slack_summary += f"\n• {kw.title()}: {cnt} papers ({percentage:.1f}%)"
+        # 按星星数排序
+        top_papers = sorted(scored_papers, key=lambda x: x.get('stars', 0), reverse=True)
+        # 过滤只显示星星数超过500的仓库
+        high_star_papers = [p for p in top_papers if p.get('stars', 0) >= 500]
         
-        # 添加推荐论文（前3篇高分论文）
-        with open("output/scored_papers.json", "r") as f:
-            scored_papers = json.load(f)
+        if not high_star_papers:
+            slack_summary += "\n*No papers with repositories having 500+ stars were found.*"
+        else:
+            slack_summary += f"\n*Top {len(high_star_papers[:5])} Recommended Papers*:"
         
-        top_papers = sorted(scored_papers, key=lambda x: x['score'], reverse=True)[:3]
-        
-        slack_summary += "\n\n*Top Recommended Papers:*"
-        for i, paper in enumerate(top_papers, 1):
+        for i, paper in enumerate(high_star_papers[:5], 1):
             title = paper['title']
-            # 智能截断：优先保留完整单词，最大100字符
-            if len(title) > 100:
+            # 智能截断：优先保留完整单词，最大80字符
+            if len(title) > 80:
                 # 在单词边界截断
                 words = title.split()
                 truncated = ""
                 for word in words:
-                    if len(truncated + word) > 95:  # 留5个字符给"..."
+                    if len(truncated + word) > 75:  # 留5个字符给"..."
                         break
                     truncated += word + " "
                 title = truncated.strip() + "..."
@@ -208,8 +140,12 @@ if SLACK_WEBHOOK:
             first_author = authors[0] if authors else "Unknown"
             author_text = f"{first_author} et al." if len(authors) > 1 else first_author
             
+            repo_url = paper.get('repo', '')
+            stars = paper.get('stars', 0)
+            
             slack_summary += f"\n{i}. *{title}*"
-            slack_summary += f"\n   Authors: {author_text} | Venue: {paper.get('venue', 'N/A')} | ⭐ {paper.get('stars', 0)} stars"
+            slack_summary += f"\n   Authors: {author_text} | Venue: {paper.get('venue', 'N/A')}"
+            slack_summary += f"\n   *Repository*: {repo_url} ({stars} ⭐)"
         
         slack_summary += f"\n\nFull detailed report: output/report.md"
         

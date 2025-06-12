@@ -30,7 +30,7 @@ def generate_report(scored_json_path, output_dir):
     report_lines.append("## Executive Summary\n")
     report_lines.append(f"- **Total Papers**: {stats['total_papers']}")
     report_lines.append(f"- **Open Source Papers**: {stats['open_source_count']} ({stats['open_source_count']/stats['total_papers']:.2%})")
-    report_lines.append(f"- **Average Recognition Score**: {stats['avg_score']:.2f}\n")
+    report_lines.append("\n")
 
     # Keyword Distribution
     report_lines.append("## Research Topics Distribution\n")
@@ -46,14 +46,19 @@ def generate_report(scored_json_path, output_dir):
     if papers_data:
         report_lines.append("## 📚 Recommended Papers\n")
         
-        # Sort papers by score (highest first)
-        sorted_papers = sorted(papers_data, key=lambda x: x.get('score', 0), reverse=True)
+        # 按照GitHub仓库星星数量排序，而不是评分
+        sorted_papers = sorted(papers_data, key=lambda x: x.get('stars', 0), reverse=True)
         
-        for i, paper in enumerate(sorted_papers[:10], 1):  # Top 10 papers
+        # 过滤只显示星星数超过500的仓库
+        high_star_papers = [p for p in sorted_papers if p.get('stars', 0) >= 500]
+        
+        if not high_star_papers:
+            report_lines.append("*No papers with repositories having 500+ stars were found.*\n")
+        
+        for i, paper in enumerate(high_star_papers[:10], 1):  # Top 10 high-star papers
             title = paper.get('title', 'N/A')
             authors = paper.get('authors', [])
             venue = paper.get('venue', 'N/A')
-            score = paper.get('score', 0)
             summary = paper.get('summary', '')
             pdf_url = paper.get('pdf_url', '')
             repo = paper.get('repo', '')
@@ -66,8 +71,9 @@ def generate_report(scored_json_path, output_dir):
             
             report_lines.append(f"### {i}. {title}")
             report_lines.append(f"**Authors**: {author_str}")
-            report_lines.append(f"**Venue**: {venue} | **Score**: {score:.1f}")
+            report_lines.append(f"**Venue**: {venue}")
             
+            # 确保GitHub仓库地址始终显示，并突出显示
             if repo and repo != "null":
                 repo_info = f"🔗 [GitHub]({repo})"
                 if stars and stars > 0:
@@ -122,7 +128,14 @@ def generate_report(scored_json_path, output_dir):
         
         report_lines.append("")
 
-    # 6. Footer with generation info
+    # 6. 添加原始数据链接
+    report_lines.append("## Raw Data\n")
+    report_lines.append("Full data is available in the following files:\n")
+    report_lines.append("- [Scored Papers (JSON)](scored_papers.json)")
+    report_lines.append("- [Filtered Papers (JSON)](filtered_papers.json)")
+    report_lines.append("- [Raw Papers (JSON)](raw_papers.json)\n")
+
+    # 7. Footer with generation info
     report_lines.append("---")
     report_lines.append(f"*Report generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} by AI Research Agent*")
 
